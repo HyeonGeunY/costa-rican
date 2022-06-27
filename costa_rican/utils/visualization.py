@@ -164,3 +164,62 @@ class NullCountsByCols():
         plt.xticks(range(len(own_variable)), xtickslabels, rotation=self.rotation)
         plt.title(title, size=self.title_size)
         
+        
+class PlotCategoricals():
+    def __init__(self, annotation_color="navy", color='lightgreen', marker= 'o', edgecolor='k', alpha=0.6, linewidth=1.5, figsize=(14, 10)):
+        
+        self.figsize = figsize
+        self.color = color
+        self.edgecolor = edgecolor
+        self.alpha = alpha
+        self.marker = marker
+        self.linewidth = linewidth
+        self.annotation_color = annotation_color
+    
+    def __call__(self, df, x, y, annotate=True):
+        raw_counts = pd.DataFrame(df.groupby(y)[x].value_counts(normalize=False))
+        raw_counts = raw_counts.rename(columns={x: 'raw_count'})
+        
+        
+        counts = pd.DataFrame(df.groupby(y)[x].value_counts(normalize = True))
+        counts = counts.rename(columns = {x: 'normalized_count'}).reset_index()
+        counts['percent'] = 100 * counts['normalized_count']
+    
+    # Add the raw count
+        counts['raw_count'] = list(raw_counts['raw_count'])
+        
+        plt.figure(figsize = self.figsize)
+        plt.scatter(counts[x], counts[y], edgecolor=self.edgecolor, color=self.color, s=100 * np.sqrt(counts['raw_count']), marker=self.marker,
+                    alpha=self.alpha, linewidth=self.linewidth)
+        
+        if annotate:
+            for i, row in counts.iterrows():
+                plt.annotate(f"{round(row['percent'], 1)}%", xy = (row[x] - (1 / counts[x].nunique()), 
+                               row[y] - (0.15 / counts[y].nunique())),
+                         color = self.annotation_color,
+                         )
+                
+        plt.yticks(counts[y].unique())
+        plt.xticks(counts[x].unique())
+        
+        sqr_min = int(np.sqrt(raw_counts['raw_count'].min()))
+        sqr_max = int(np.sqrt(raw_counts['raw_count'].max()))
+
+        msizes = list(range(sqr_min, sqr_max, int((sqr_max -sqr_min) / 5)))
+        markers = []
+        
+        for size in msizes:
+            markers.append(plt.scatter([], [], s = 100 * size, label=f'{int(round(np.square(size) / 100) * 100)}',
+                           color=self.color, alpha=self.alpha, edgecolor=self.edgecolor, linewidth=self.linewidth))
+        
+        plt.legend(handles = markers, title='Counts', labelspacing=3, handletextpad=2, fontsize=16, loc=(1.10, 0.19))
+        plt.annotate(f'* Size represents raw count while % is for a given y value.',
+                     xy = (0, 1), xycoords='figure points', size=10
+                     )        
+        plt.xlim((counts[x].min() - (6 / counts[x].nunique()),
+                  counts[x].max() + (6 / counts[x].nunique())))
+        plt.ylim((counts[y].min() - (4 / counts[y].nunique()),
+                  counts[y].max() + (4 / counts[y].nunique())))
+        plt.grid(None)
+        plt.xlabel(f"{x}"); plt.ylabel(f"{y}"); plt.title(f"{y} vs {x}");
+        
