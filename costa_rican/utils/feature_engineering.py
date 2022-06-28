@@ -1,4 +1,3 @@
-from costa_rican.utils.eda import onehot_to_ordinal
 import numpy as np
 
 id_ = ["Id", "idhogar", "Target"]
@@ -39,6 +38,149 @@ sqr_ = ['SQBescolari', 'SQBage', 'SQBhogar_total', 'SQBedjefe',
         'SQBhogar_nin', 'SQBovercrowding', 'SQBdependency', 'SQBmeaned', 'agesq']
 
 
+from collections import Counter
+def check_duplicated_features(data):
+    """중복된 변수가 있는 지 확인한다.
+    """
+    x = ind_bool + ind_ordered + id_ + hh_bool + hh_ordered + hh_cont + sqr_
+    print('There are no repeats: ', np.all(np.array(list(Counter(x).values())) == 1))
+    print('We covered every variable: ', len(x) == data.shape[1])
+
+
+def features_v1(data):
+    # sqr 데이터 삭제
+    data = remove_sqr_features(data)
+    # household 단위 특징 추출
+    heads = get_heads_features(data)
+    heads = features_hh_v1(heads)
+    
+    # individual 단위 특징 추출
+    ind = data[id_ + ind_bool + ind_ordered]
+    ind_agg = feature_ind_v1(ind)
+    
+    final = merge_left(heads, ind_agg)
+    final = add_parent_gender_feature(final, ind)
+    
+    return final
+    
+############ household ############
+def features_hh_v1(heads):
+    
+    # correlation이 높은 특징 삭제
+    heads = heads.drop(columns=['tamhog', 'hogar_total', 'r4t3'])
+    # 가구내 실 거주인 수 - 가족 구성원 수
+    heads = add_hhsize_diff(heads)
+    # 전기(elec)관련 특징을 ordinal 데이터로 변경
+    heads = compress_elec_columns(heads)
+    # area2 특징 삭제
+    heads = remove_area2_feature(heads)
+    # wall의 등급과 관련된 특징들 ordinal로 변경
+    heads = onehot_to_ordinal(heads, ord_col="walls", onehot_list=['epared1', 'epared2', 'epared3'])
+    # Roof ordinal variable
+    heads = onehot_to_ordinal(heads, ord_col="roof", onehot_list=['etecho1', 'etecho2', 'etecho3'])
+    # Floor ordinal variable
+    heads = onehot_to_ordinal(heads, ord_col="floor", onehot_list=['eviv1', 'eviv2', 'eviv3'])
+    heads = add_housequality_feature(heads)
+    heads = add_warning_feature(heads)
+    heads = add_bonus_feature(heads)
+    
+    # 인원수 당 장비 수
+    heads['phones-per-capita'] = heads['qmobilephone'] / heads['tamviv']
+    heads['tablets-per-capita'] = heads['v18q1'] / heads['tamviv']
+    heads['rooms-per-capita'] = heads['rooms'] / heads['tamviv']
+    heads['rent-per-capita'] = heads['v2a1'] / heads['tamviv']
+    
+    return heads
+        
+    
+def remove_sqr_features(data):
+    """sqr 데이터를 삭제한다.
+    """
+    return data.drop(columns = sqr_)
+
+
+def get_heads_features(data):
+    """householde 특징들을 추출하여 반환한다.
+    """
+    heads = data.loc[data['parentesco1'] == 1, :]
+    heads = heads[id_ + hh_bool + hh_cont + hh_ordered]
+    
+    return heads
+
+def compress_elec_columns(heads):
+    """전기와 관련된 특징을 ordinal 특징으로 변경한다.
+       전기 수급 방식에 따라 가난의 정도를 어느정도 반영할 수 있다.
+    """
+    elec = []
+
+    for _, row in heads.iterrows():
+        if row["noelec"] == 1:
+            elec.append(0)
+        elif row["coopele"] == 1:
+            elec.append(1)
+        elif row["public"] == 1:
+            elec.append(2)
+        elif row["planpri"] == 1:
+            elec.append(3)
+        else:
+            elec.append(np.nan)
+
+    heads["elec"] = elec
+    heads["elec-missing"] = heads["elec"].isnull()
+    heads = heads.drop(columns=["noelec", "coopele", "public", "planpri"])
+    return heads
+
+
+def remove_area2_feature(heads):
+    """`area2` 특징은 집이 시골지역에 있는지를 나타낸다.     
+        위 특징은 집이 도시에 있는지를 나타내는 특징(`area1`)과 같은 정보를 가지므로 제거한다.
+    """
+    heads = heads.drop(columns = 'area2')
+    return heads
+
+def add_housequality_feature(df):
+    df["walls+roof+floor"] = df["walls"] + df["roof"] + df["floor"]
+    return df
+
+
+def add_warning_feature(df):
+    """toilet, electricity, floor, water service, ceiling 등 설비가 없는 가구에 대해 -1 값을 갖는 특징들을 합해 warning 특징을 만든다.
+
+    Args:
+        df (_type_): _description_
+    """
+    df['warning'] = 1 * (df['sanitario1'] + 
+                        (df['elec'] == 0) + 
+                         df['pisonotiene'] + 
+                         df['abastaguano'] + 
+                        (df['cielorazo'] == 0))
+    
+    return df
+
+
+def add_bonus_feature(df):
+    """냉장고, 컴퓨터, 테블릿, 티비 등의 설비 존재 여부로 새로운 특징(bonus)을 만든다
+    """
+    
+    df['bonus'] = 1 * (df['refrig'] + 
+                          df['computer'] + 
+                         (df['v18q1'] > 0) + 
+                          df['television'])
+
+    return df
+
+
+def add_hhsize_diff(heads, is_viz=True):
+    """
+    가족 구성원 수보다 더 많은 수의 인원이 한 가구에 사는 샘플이 존재하는 것을 알 수 있다.     
+    위 정보를 통해 두 값의 차이로 새로운 특징을 만들어 낼 수 있다.
+    """
+    heads["hhsize-diff"] = heads["tamviv"] - heads["hhsize"]
+
+    return heads
+
+########## individual ##########
+
 def feature_ind_v1(ind):
     
     # female과 같은 정보를 담고 있는 male 특징 삭제
@@ -51,6 +193,10 @@ def feature_ind_v1(ind):
     ind['inst/age'] = ind['inst'] / ind['age']
     ind['tech'] = ind['v18q'] + ind['mobilephone']
     
+    ind_agg = agg_ind_features(ind)
+    ind_agg = drop_high_pcorr_features(ind_agg)
+    
+    return ind_agg
 
 def agg_ind_features(ind):
     """개별 단위 특징을 가구단위 특징과 통합하기 위해서는 개별 단위 특징을 가구단위로 묶어서 집계할 필요가 있다.     
@@ -73,7 +219,17 @@ def agg_ind_features(ind):
     
     return ind_agg
     
-    
+########### final ##########
+def add_parent_gender_feature(final, ind):
+    """
+    가장의 성별 데이터 추가
+    """
+    head_gender = ind.loc[ind['parentesco1'] == 1, ['idhogar', 'female']]
+    final = final.merge(head_gender, on = 'idhogar', how = 'left').rename(columns = {'female': 'female-head'})
+    return final
+
+
+# utils
 def drop_high_pcorr_features(df):
     """높은 correlation을 갖는 인자들을 제거한다.
     """
@@ -91,5 +247,14 @@ def drop_high_pcorr_features(df):
     
     return df
 
+
 def merge_left(df_left, df_right):
     return df_left.merge(df_right, on = 'idhogar', how = 'left')
+
+
+def onehot_to_ordinal(df, ord_col, onehot_list):
+    """ binary 형식으로 나누어져 있는 특징들을 ordinal 특징으로 변환한다.
+    """
+    df[ord_col] = np.argmax(np.array(df[onehot_list]), axis=1)
+    df = df.drop(columns=onehot_list)
+    return df

@@ -82,48 +82,6 @@ def get_features_over_corr(df, corr_num):
     return corr_matrix
 
 
-def get_hhsize_diff(df, is_viz=True):
-    df["hhsize-diff"] = df["tamviv"] - df["hhsize"]
-
-    if is_viz:
-        plot_categoricals = PlotCategoricals()
-        plot_categoricals("hhsize-diff", "Target", df)
-
-    return df
-
-
-def compress_elec_columns(df):
-    elec = []
-
-    for i, row in df.iterrows():
-        if row["noelec"] == 1:
-            elec.append(0)
-        elif row["coopele"] == 1:
-            elec.append(1)
-        elif row["public"] == 1:
-            elec.append(2)
-        elif row["planpri"] == 1:
-            elec.append(3)
-        else:
-            elec.append(np.nan)
-
-    df["elec"] = elec
-    df["elec-missing"] = df["elec"].isnull()
-    df = df.drop(columns=["noelec", "coopele", "public", "planpri"])
-    return df
-
-
-def onehot_to_ordinal(df, ord_col, onehot_list):
-    df[ord_col] = np.argmax(np.array(df[onehot_list]), axis=1)
-    df = df.drop(columns=onehot_list)
-    return df
-
-
-def add_housequality_feature(df):
-    df["walls+roof+floor"] = df["walls"] + df["roof"] + df["floor"]
-    return df
-
-
 def get_count_of_housequality(df):
     counts = (
         pd.DataFrame(df.groupby(["walls+roof+floor"])["Target"].value_counts(normalize=True))
@@ -131,21 +89,6 @@ def get_count_of_housequality(df):
         .reset_index()
     )
     return counts
-
-
-def add_warning_feature(df):
-    """toilet, electricity, floor, water service, ceiling 등 설비가 없는 가구에 대해 -1 값을 갖는 특징들을 합해 warning 특징을 만든다.
-
-    Args:
-        df (_type_): _description_
-    """
-    df['warning'] = 1 * (df['sanitario1'] + 
-                        (df['elec'] == 0) + 
-                         df['pisonotiene'] + 
-                         df['abastaguano'] + 
-                        (df['cielorazo'] == 0))
-    
-    return df
 
 
 def get_pcorrs(df):
