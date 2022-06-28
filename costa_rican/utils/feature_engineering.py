@@ -1,4 +1,5 @@
 from costa_rican.utils.eda import onehot_to_ordinal
+import numpy as np
 
 id_ = ["Id", "idhogar", "Target"]
 
@@ -73,3 +74,22 @@ def agg_ind_features(ind):
     return ind_agg
     
     
+def drop_high_pcorr_features(df):
+    """높은 correlation을 갖는 인자들을 제거한다.
+    """
+    corr_matrix = df.corr()
+
+    # Select upper triangle of correlation matrix
+    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
+
+    # Find index of feature columns with correlation greater than 0.95
+    to_drop = [column for column in upper.columns if any(abs(upper[column]) > 0.95)]
+
+    print(f'There are {len(to_drop)} correlated columns to remove.')
+    df = df.drop(columns = to_drop)
+    ind_feats = list(df.columns)
+    
+    return df
+
+def merge_left(df_left, df_right):
+    return df_left.merge(df_right, on = 'idhogar', how = 'left')

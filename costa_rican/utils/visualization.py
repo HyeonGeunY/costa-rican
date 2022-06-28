@@ -360,3 +360,22 @@ class PlotCorrs():
         df = pd.DataFrame({'x': x, 'y': y})
         sns.regplot(x='x', y='y', data=df, fit_reg=False);
         plt.title(f'Spearman: {round(spr, 2)} Pearson: {round(pcr, 2)}')
+        
+        
+class BoxByTarget():
+    def __init__(self, figsize=(10, 6), target_xticks=False):
+        self.figsize = figsize
+        self.target_xticks = target_xticks
+        self.colors = OrderedDict({1: 'red', 2: 'orange', 3: 'blue', 4: 'green'})
+        self.poverty_mapping = OrderedDict({1: 'extreme', 2: 'moderate', 3: 'vulnerable', 4: 'non vulnerable'})
+        
+    def __call__(self, x, y, data, title=None, hue=None):
+        plt.figure(figsize=self.figsize)
+        sns.boxplot(x=x, y=y, data=data, hue=hue)
+        if title:
+            plt.title(title)
+        else:
+            plt.title(f"{y} vs {x} variables")
+            
+        if self.target_xticks:
+            plt.xticks(range(len(self.poverty_mapping)), self.poverty_mapping.values())
