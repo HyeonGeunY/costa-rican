@@ -15,16 +15,6 @@ class ReplaceValues:
         return df
 
 
-def num_different_poverty_level(df):
-    all_equal = df.groupby("idhogar")["Target"].apply(lambda x: x.nunique() == 1)
-    not_equal = all_equal[all_equal != True]
-    print(
-        f"There are {len(not_equal)} households where the family members do not all have the same target"
-    )
-
-    return not_equal
-
-
 def get_num_without_household(df):
     households_leader = df.groupby("idhogar")["parentesco1"].sum()
     households_no_head = df.loc[
@@ -33,22 +23,6 @@ def get_num_without_household(df):
     print(f"There are {households_no_head['idhogar'].nunique()} households without a head.")
 
     return households_no_head
-
-
-def correct_poverty_levels(df):
-    print("Before")
-    not_equal = num_different_poverty_level(df)
-    for household in not_equal.index:
-        true_target = int(df[(df["idhogar"] == household) & (df["parentesco1"] == 1.0)]["Target"])
-
-        df.loc[df["idhogar"] == household, "Target"] = true_target
-
-    all_equal = df.groupby("idhogar")["Target"].apply(lambda x: x.nunique() == 1)
-    not_equal = all_equal[all_equal != True]
-    print("After")
-    print(
-        f"There are {len(not_equal)} households where the family members do not all have the same target"
-    )
 
 
 def get_missing_val_info(df):
@@ -60,16 +34,6 @@ def get_missing_val_info(df):
 def get_null_by_group(df, group, col):
     print(df.groupby(group)[col].apply(lambda x: x.isnull().sum()))
 
-
-def fill_nan_with_zero(df, col):
-    df[col] = df[col].fillna(0)
-    return df
-
-
-def fill_null_v2a1(df):
-    df.loc[(df["tipovivi1"] == 1), "v2a1"] = 0
-    df["v2a1-missing"] = df["v2a1"].isnull()
-    return df
 
 
 def get_features_over_corr(df, corr_num):

@@ -47,9 +47,35 @@ def check_duplicated_features(data):
     print('We covered every variable: ', len(x) == data.shape[1])
 
 
+def preprocessing_train_test_and_merge(train, test):
+    
+    # 가족구성원들의 poverty level을 세대주와 통일
+    train = correct_poverty_levels(train)
+    
+    mapping = {"yes": 1, "no": 0}
+    columns = ['dependency', 'edjefa', 'edjefe']
+    replace_object_value = ReplaceValues(mapping)
+
+    train = replace_object_value(train, columns)
+    test = replace_object_value(test, columns)
+    
+    
+    test['Target'] = np.nan
+    data = train.append(test, ignore_index = True)
+    
+    return data
+
+
 def features_v1(data):
+    
     # sqr 데이터 삭제
     data = remove_sqr_features(data)
+    
+    # null 값 채우기
+    data = fill_nan_with_zero(data, 'v18q1')
+    data = fill_null_v2a1(data)
+    data = fill_null_rez_esc(data)
+    
     # household 단위 특징 추출
     heads = get_heads_features(data)
     heads = features_hh_v1(heads)
@@ -62,7 +88,36 @@ def features_v1(data):
     final = add_parent_gender_feature(final, ind)
     
     return final
+
+########### fill null data ##########
+
+def fill_nan_with_zero(df, col):
+    df[col] = df[col].fillna(0)
+    return df
+
+
+def fill_null_v2a1(df):
+    df.loc[(df["tipovivi1"] == 1), "v2a1"] = 0
+    df["v2a1-missing"] = df["v2a1"].isnull()
+    return df
+
+
+def fill_null_rez_esc(data):
+    """
+    https://www.kaggle.com/c/costa-rican-household-poverty-prediction/discussion/61403    
+    위 링크에 따르면 `rez_esc` 특징은 7~19세 사이의 나이대에 해당하는 샘플에서만 정의된 것을 알 수 있다.     
+    따라서 해당 나이 범위에 해당하지 않은 샘플의 결측치는 0으로 설정할 수 있다.     
+    그에 해당하지 않는 샘플의 경우 이전과 같이 결측치임을 알려주는 새로운 열을 추가한 후 다른 숫자로 대체한다.
+    """
+    data.loc[((data['age'] > 19) | (data['age'] < 7)) & (data['rez_esc'].isnull()), 'rez_esc'] = 0
+    data['rez_esc-missing'] = data['rez_esc'].isnull()
     
+#   competition discussion에 따르면 `rez_esc` 특징의 최대값은 5이다.     
+#   따라서 해당 값보다 큰 값을 갖는 샘플은 5로 값을 제한한다.
+    data.loc[data['rez_esc'] > 5, 'rez_esc'] = 5
+    
+    return data
+
 ############ household ############
 def features_hh_v1(heads):
     
@@ -218,6 +273,7 @@ def agg_ind_features(ind):
     ind_agg.columns = new_col
     
     return ind_agg
+
     
 ########### final ##########
 def add_parent_gender_feature(final, ind):
@@ -258,3 +314,53 @@ def onehot_to_ordinal(df, ord_col, onehot_list):
     df[ord_col] = np.argmax(np.array(df[onehot_list]), axis=1)
     df = df.drop(columns=onehot_list)
     return df
+
+
+class ReplaceValues:
+    def __init__(self, mapping):
+        self.mapping = mapping
+
+    def __call__(self, df, columns):
+        # Fill in the values with the correct mapping
+        for c in columns:
+            df[f"{c}"] = df[f"{c}"].replace(self.mapping).astype(np.float64)
+
+        return df
+
+
+def num_different_poverty_level(df):
+    """
+    가족 구성원들 중 세대주와 poverty level이 다른 구성원이 존재하는 household id를 반환한다.
+    """
+    all_equal = df.groupby("idhogar")["Target"].apply(lambda x: x.nunique() == 1)
+    not_equal = all_equal[all_equal != True]
+    print(
+        f"There are {len(not_equal)} households where the family members do not all have the same target"
+    )
+
+    return not_equal
+
+
+def correct_poverty_levels(df):
+    """
+    세대주와 poreverty level이 다른 가족 구성원들의 poverty level 를 일치시킨다.
+    """
+    print("Before")
+    not_equal = num_different_poverty_level(df)
+    for household in not_equal.index:
+        true_target = int(df[(df["idhogar"] == household) & (df["parentesco1"] == 1.0)]["Target"])
+
+        df.loc[df["idhogar"] == household, "Target"] = true_target
+
+    all_equal = df.groupby("idhogar")["Target"].apply(lambda x: x.nunique() == 1)
+    not_equal = all_equal[all_equal != True]
+    print("After")
+    print(
+        f"There are {len(not_equal)} households where the family members do not all have the same target"
+    )
+    
+    return df
+
+
+
+    
