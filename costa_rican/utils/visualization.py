@@ -287,7 +287,6 @@ class HeatmapSeabornWithThreshold:
         self.annot = annot
         self.fmt = fmt
         self.cmap = cmap
-        
 
     def __call__(self, feature, corr_matrix, thres=0.9):
         sns.heatmap(
@@ -298,10 +297,18 @@ class HeatmapSeabornWithThreshold:
         )
 
 
-
 class HeatmapSeaborn:
-    
-    def __init__(self, annot=True, fmt=".3f", cmap=plt.cm.autumn_r, fontsize=18, figsize=(12, 12), vmin=-0.5, vmax=0.8, center=0):
+    def __init__(
+        self,
+        annot=True,
+        fmt=".3f",
+        cmap=plt.cm.autumn_r,
+        fontsize=18,
+        figsize=(12, 12),
+        vmin=-0.5,
+        vmax=0.8,
+        center=0,
+    ):
         self.annot = annot
         self.cmap = cmap
         self.fontsize = fontsize
@@ -311,11 +318,16 @@ class HeatmapSeaborn:
         self.center = center
 
     def __call__(self, corr_matrix):
-        plt.rcParams['font.size'] = self.fontsize
+        plt.rcParams["font.size"] = self.fontsize
         plt.figure(figsize=self.figsize)
-        sns.heatmap(corr_matrix, vmin=self.vmin, vmax=self.vmax, center=self.center, 
-            cmap = plt.cm.RdYlGn_r, annot=self.annot);
-
+        sns.heatmap(
+            corr_matrix,
+            vmin=self.vmin,
+            vmax=self.vmax,
+            center=self.center,
+            cmap=plt.cm.RdYlGn_r,
+            annot=self.annot,
+        )
 
 
 class LmPlot:
@@ -324,19 +336,26 @@ class LmPlot:
         self.height = height
         self.x_jitter = x_jitter
         self.y_jitter = y_jitter
-        
 
     def __call__(self, x, y, df):
-        
-        sns.lmplot(x=x, y=y, data=df, fit_reg=self.fig_reg, height=self.height, x_jitter=self.x_jitter, y_jitter=self.y_jitter)
-        
+
+        sns.lmplot(
+            x=x,
+            y=y,
+            data=df,
+            fit_reg=self.fig_reg,
+            height=self.height,
+            x_jitter=self.x_jitter,
+            y_jitter=self.y_jitter,
+        )
+
         plt.title(f"{y} versus {x}")
 
 
-class ViolinByTarget():
+class ViolinByTarget:
     def __init__(self, figsize=(10, 6)):
-        self.figsize=figsize
-    
+        self.figsize = figsize
+
     def __call__(self, x, y, data, title=None):
         plt.figure(figsize=self.figsize)
         sns.violinplot(x=x, y=y, data=data)
@@ -344,31 +363,34 @@ class ViolinByTarget():
             plt.title(title)
         else:
             plt.title(f"{y} vs {x} variables")
-            
-            
+
+
 from scipy.stats import spearmanr
 
-class PlotCorrs():
+
+class PlotCorrs:
     def __init__(self, figsize=(8, 6), fit_reg=False):
-        self.figsize=figsize
-        self.fit_reg=fit_reg
-    
+        self.figsize = figsize
+        self.fit_reg = fit_reg
+
     def __call__(self, x, y):
         plt.figure(figsize=self.figsize)
         spr = spearmanr(x, y).correlation
         pcr = np.corrcoef(x, y)[0, 1]
-        df = pd.DataFrame({'x': x, 'y': y})
-        sns.regplot(x='x', y='y', data=df, fit_reg=False);
-        plt.title(f'Spearman: {round(spr, 2)} Pearson: {round(pcr, 2)}')
-        
-        
-class BoxByTarget():
+        df = pd.DataFrame({"x": x, "y": y})
+        sns.regplot(x="x", y="y", data=df, fit_reg=False)
+        plt.title(f"Spearman: {round(spr, 2)} Pearson: {round(pcr, 2)}")
+
+
+class BoxByTarget:
     def __init__(self, figsize=(10, 6), target_xticks=False):
         self.figsize = figsize
         self.target_xticks = target_xticks
-        self.colors = OrderedDict({1: 'red', 2: 'orange', 3: 'blue', 4: 'green'})
-        self.poverty_mapping = OrderedDict({1: 'extreme', 2: 'moderate', 3: 'vulnerable', 4: 'non vulnerable'})
-        
+        self.colors = OrderedDict({1: "red", 2: "orange", 3: "blue", 4: "green"})
+        self.poverty_mapping = OrderedDict(
+            {1: "extreme", 2: "moderate", 3: "vulnerable", 4: "non vulnerable"}
+        )
+
     def __call__(self, x, y, data, title=None, hue=None):
         plt.figure(figsize=self.figsize)
         sns.boxplot(x=x, y=y, data=data, hue=hue)
@@ -376,6 +398,148 @@ class BoxByTarget():
             plt.title(title)
         else:
             plt.title(f"{y} vs {x} variables")
-            
+
         if self.target_xticks:
             plt.xticks(range(len(self.poverty_mapping)), self.poverty_mapping.values())
+
+
+class PlotFeatureImportances:
+    def __init__(
+        self,
+        style="fivethirtyeight",
+        fontsize=12,
+        color="darkgreen",
+        edgecolor="k",
+        figsize=(12, 8),
+        legend=False,
+        linewidth=2,
+    ):
+        self.style = style
+        self.fontsize = fontsize
+        self.edgecolor = edgecolor
+        self.figsize = figsize
+        self.linewidth = linewidth
+        self.color = color
+        self.legend = legend
+
+    def __call__(self, df, n=10, threshold=None):
+        plt.style.use(self.style)
+        plt.rcParams["font.size"] = self.font_size
+
+        """Plots n most important features. Also plots the cumulative importance if
+            threshold is specified and prints the number of features needed to reach threshold cumulative importance.
+            Intended for use with any tree-based feature importances. 
+            
+            Args:
+                df (dataframe): Dataframe of feature importances. Columns must be "feature" and "importance".
+            
+                n (int): Number of most important features to plot. Default is 15.
+            
+                threshold (float): Threshold for cumulative importance plot. If not provided, no plot is made. Default is None.
+                
+            Returns:
+                df (dataframe): Dataframe ordered by feature importances with a normalized column (sums to 1) 
+                                and a cumulative importance column
+            
+            Note:
+            
+                * Normalization in this case means sums to 1. 
+                * Cumulative importance is calculated by summing features from most to least important
+                * A threshold of 0.9 will show the most important features needed to reach 90% of cumulative importance
+            
+        """
+
+        # Sort features with most important at the head
+        df = df.sort_values("importance", ascending=False).reset_index(drop=True)
+
+        # Normalize the feature importances to add up to one and calculate cumulative importance
+        df["importance_normalized"] = df["importance"] / df["importance"].sum()
+        df["cumulative_importance"] = np.cumsum(df["importance_normalized"])
+
+        plt.rcParams["font.size"] = 12
+
+        # Bar plot of n most important features
+        df.loc[:n, :].plot.barh(
+            y="importance_normalized",
+            x="feature",
+            color=self.color,
+            edgecolor="k",
+            figsize=se,
+            legend=False,
+            linewidth=2,
+        )
+
+        plt.xlabel("Normalized Importance", size=18)
+        plt.ylabel("")
+        plt.title(f"{n} Most Important Features", size=18)
+        plt.gca().invert_yaxis()
+
+        if threshold:
+            # Cumulative importance plot
+            plt.figure(figsize=(8, 6))
+            plt.plot(list(range(len(df))), df["cumulative_importance"], "b-")
+            plt.xlabel("Number of Features", size=16)
+            plt.ylabel("Cumulative Importance", size=16)
+            plt.title("Cumulative Feature Importance", size=18)
+
+            # Number of features needed for threshold cumulative importance
+            # This is the index (will need to add 1 for the actual number)
+            importance_index = np.min(np.where(df["cumulative_importance"] > threshold))
+
+            # Add vertical line to plot
+            plt.vlines(importance_index + 1, ymin=0, ymax=1.05, linestyles="--", colors="red")
+            plt.show()
+
+            print(
+                "{} features required for {:.0f}% of cumulative importance.".format(
+                    importance_index + 1, 100 * threshold
+                )
+            )
+
+        return df
+
+
+def plot_feature_importances(df):
+    """
+    Plot importances returned by a model. This can work with any measure of
+    feature importance provided that higher importance is better.
+
+    Args:
+        df (dataframe): feature importances. Must have the features in a column
+        called `features` and the importances in a column called `importance
+
+    Returns:
+        shows a plot of the 15 most importance features
+
+        df (dataframe): feature importances sorted by importance (highest to lowest)
+        with a column for normalized importance
+    """
+
+    # Sort features according to importance
+    df = df.sort_values("importance", ascending=False).reset_index()
+
+    # Normalize the feature importances to add up to one
+    df["importance_normalized"] = df["importance"] / df["importance"].sum()
+
+    # Make a horizontal bar chart of feature importances
+    plt.figure(figsize=(10, 6))
+    ax = plt.subplot()
+
+    # Need to reverse the index to plot most important on top
+    ax.barh(
+        list(reversed(list(df.index[:15]))),
+        df["importance_normalized"].head(15),
+        align="center",
+        edgecolor="k",
+    )
+
+    # Set the yticks and labels
+    ax.set_yticks(list(reversed(list(df.index[:15]))))
+    ax.set_yticklabels(df["feature"].head(15))
+
+    # Plot labeling
+    plt.xlabel("Normalized Importance")
+    plt.title("Feature Importances")
+    plt.show()
+
+    return df
