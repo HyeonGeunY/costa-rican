@@ -58,7 +58,7 @@ class KdePlotByTarget:
         plt.subplots_adjust(top=2)
 
 
-class KdePlotByTargetAndColumn:
+class KdePlotByTargetAndColumns:
     def __init__(self, df, figsize=(20, 16), style="fivethirtyeight"):
         self.df = df
         self.figsize = figsize
@@ -413,6 +413,8 @@ class PlotFeatureImportances:
         figsize=(12, 8),
         legend=False,
         linewidth=2,
+        labelsize=16,
+        cum_figsize=(8, 6)
     ):
         self.style = style
         self.fontsize = fontsize
@@ -421,10 +423,12 @@ class PlotFeatureImportances:
         self.linewidth = linewidth
         self.color = color
         self.legend = legend
+        self.labelsize = labelsize
+        self.cum_figsize = cum_figsize
 
     def __call__(self, df, n=10, threshold=None):
         plt.style.use(self.style)
-        plt.rcParams["font.size"] = self.font_size
+        plt.rcParams["font.size"] = self.fontsize
 
         """Plots n most important features. Also plots the cumulative importance if
             threshold is specified and prints the number of features needed to reach threshold cumulative importance.
@@ -456,16 +460,14 @@ class PlotFeatureImportances:
         df["importance_normalized"] = df["importance"] / df["importance"].sum()
         df["cumulative_importance"] = np.cumsum(df["importance_normalized"])
 
-        plt.rcParams["font.size"] = 12
-
         # Bar plot of n most important features
         df.loc[:n, :].plot.barh(
             y="importance_normalized",
             x="feature",
             color=self.color,
-            edgecolor="k",
-            figsize=se,
-            legend=False,
+            edgecolor=self.edgecolor,
+            figsize=self.figsize,
+            legend=self.legend,
             linewidth=2,
         )
 
@@ -476,11 +478,11 @@ class PlotFeatureImportances:
 
         if threshold:
             # Cumulative importance plot
-            plt.figure(figsize=(8, 6))
+            plt.figure(figsize=self.cum_figsize)
             plt.plot(list(range(len(df))), df["cumulative_importance"], "b-")
-            plt.xlabel("Number of Features", size=16)
-            plt.ylabel("Cumulative Importance", size=16)
-            plt.title("Cumulative Feature Importance", size=18)
+            plt.xlabel("Number of Features", size=self.labelsize)
+            plt.ylabel("Cumulative Importance", size=self.labelsize)
+            plt.title("Cumulative Feature Importance", size=self.labelsize + 2)
 
             # Number of features needed for threshold cumulative importance
             # This is the index (will need to add 1 for the actual number)

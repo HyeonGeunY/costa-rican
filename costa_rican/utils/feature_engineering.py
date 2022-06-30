@@ -392,9 +392,10 @@ def features_v1(data):
     final = merge_left(heads, ind_agg)
     final = add_parent_gender_feature(final, ind)
 
-    train_set, test_set, train_labels = split_train_test(final)
+    # train_set, test_set, train_labels = split_train_test(final)
 
-    return train_set, test_set, train_labels
+    #return train_set, test_set, train_labels
+    return final
 
 
 ########### fill null data ##########
