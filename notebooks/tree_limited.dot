@@ -1,0 +1,33 @@
+digraph Tree {
+node [shape=box, style="filled, rounded", color="black", fontname="helvetica"] ;
+edge [fontname="helvetica"] ;
+0 [label="escolari-max <= 0.64\ngini = 0.52\nsamples = 1874\nvalue = [226, 432, 355, 1960]\nclass = non-vulnerable", fillcolor="#e788ef"] ;
+1 [label="r4m3 <= 0.31\ngini = 0.62\nsamples = 1372\nvalue = [219, 417, 328, 1186]\nclass = non-vulnerable", fillcolor="#eda7f3"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="walls+roof+floor <= 0.75\ngini = 0.58\nsamples = 1117\nvalue = [157, 294, 251, 1057]\nclass = non-vulnerable", fillcolor="#ea98f1"] ;
+1 -> 2 ;
+3 [label="gini = 0.68\nsamples = 546\nvalue = [103, 205, 137, 390]\nclass = non-vulnerable", fillcolor="#f3c5f7"] ;
+2 -> 3 ;
+4 [label="gini = 0.45\nsamples = 571\nvalue = [54, 89, 114, 667]\nclass = non-vulnerable", fillcolor="#e478ed"] ;
+2 -> 4 ;
+5 [label="inst-range_ <= 0.44\ngini = 0.73\nsamples = 255\nvalue = [62, 123, 77, 129]\nclass = non-vulnerable", fillcolor="#fefbfe"] ;
+1 -> 5 ;
+6 [label="gini = 0.71\nsamples = 156\nvalue = [42, 100, 40, 59]\nclass = moderate", fillcolor="#d6f9d2"] ;
+5 -> 6 ;
+7 [label="gini = 0.68\nsamples = 99\nvalue = [20, 23, 37, 70]\nclass = non-vulnerable", fillcolor="#f3c5f7"] ;
+5 -> 7 ;
+8 [label="overcrowding <= 0.33\ngini = 0.11\nsamples = 502\nvalue = [7, 15, 27, 774]\nclass = non-vulnerable", fillcolor="#d945e7"] ;
+0 -> 8 [labeldistance=2.5, labelangle=-45, headlabel="False"] ;
+9 [label="hhsize <= 0.29\ngini = 0.09\nsamples = 489\nvalue = [5, 10, 23, 763]\nclass = non-vulnerable", fillcolor="#d943e6"] ;
+8 -> 9 ;
+10 [label="gini = 0.07\nsamples = 422\nvalue = [5, 10, 8, 665]\nclass = non-vulnerable", fillcolor="#d840e6"] ;
+9 -> 10 ;
+11 [label="gini = 0.23\nsamples = 67\nvalue = [0, 0, 15, 98]\nclass = non-vulnerable", fillcolor="#dd57e9"] ;
+9 -> 11 ;
+12 [label="inst/age-range_ <= 0.42\ngini = 0.66\nsamples = 13\nvalue = [2, 5, 4, 11]\nclass = non-vulnerable", fillcolor="#f1b9f6"] ;
+8 -> 12 ;
+13 [label="gini = 0.0\nsamples = 1\nvalue = [0, 3, 0, 0]\nclass = moderate", fillcolor="#47e539"] ;
+12 -> 13 ;
+14 [label="gini = 0.6\nsamples = 12\nvalue = [2, 2, 4, 11]\nclass = non-vulnerable", fillcolor="#eca3f3"] ;
+12 -> 14 ;
+}

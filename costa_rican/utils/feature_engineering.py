@@ -604,8 +604,12 @@ def add_parent_gender_feature(final, ind):
 
 
 # utils
-def drop_high_pcorr_features(df):
+def drop_high_pcorr_features(df, features=None):
     """높은 correlation을 갖는 인자들을 제거한다."""
+    
+    if features and isinstance(df, np.ndarray):
+        df = pd.DataFrame(df, columns = features)
+        
     corr_matrix = df.corr()
 
     # Select upper triangle of correlation matrix
@@ -616,7 +620,6 @@ def drop_high_pcorr_features(df):
 
     print(f"There are {len(to_drop)} correlated columns to remove.")
     df = df.drop(columns=to_drop)
-    ind_feats = list(df.columns)
 
     return df
 
@@ -690,3 +693,20 @@ def split_train_test(final):
     test_set = final[final["Target"].isnull()].drop(columns=["Id", "idhogar", "Target"])
 
     return train_set, test_set, train_labels
+
+
+def align_train_test(train_set, test_set, features=None):
+    """
+    train_set와 test_set의 특징을 똑같이 만들어 준다.
+    """
+    
+    if isinstance(train_set, np.ndarray):
+        train_set = pd.DataFrame(train_set, columns=features)
+    
+    if isinstance(test_set, np.ndarray):
+        test_set = pd.DataFrame(test_set, columns=features)
+    
+    train_set, test_set = train_set.align(test_set, axis = 1, join = 'inner')
+    features = list(train_set.columns)
+    
+    return train_set, test_set, features

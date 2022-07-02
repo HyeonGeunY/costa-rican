@@ -356,13 +356,14 @@ class ViolinByTarget:
     def __init__(self, figsize=(10, 6)):
         self.figsize = figsize
 
-    def __call__(self, x, y, data, title=None):
+    def __call__(self, x, y, data, hue=None, title=None):
         plt.figure(figsize=self.figsize)
-        sns.violinplot(x=x, y=y, data=data)
+        sns.violinplot(x=x, y=y, hue=hue, data=data)
         if title:
             plt.title(title)
         else:
             plt.title(f"{y} vs {x} variables")
+
 
 
 from scipy.stats import spearmanr
@@ -545,3 +546,89 @@ def plot_feature_importances(df):
     plt.show()
 
     return df
+
+
+class CVBarPlot():
+    """
+    각 모델의 metric 값의 barplot
+    """
+    def __init__(self, color='orange', figsize=(8, 6), edgecolor='k', linewidth=2):
+        self.color = color
+        self.figsize = figsize
+        self.edgecolor = edgecolor
+        self.linewidth = linewidth
+        
+    def __call__(self, df):
+        df.set_index('model', inplace = True)
+        df['cv_mean'].plot.bar(color=self.color, figsize=self.figsize,
+                                  yerr=list(df['cv_std']),
+                                  edgecolor=self.edgecolor, linewidth=self.linewidth)
+        plt.title('Model F1 Score Results')
+        plt.ylabel('Mean F1 Score (with error bar)')
+        df.reset_index(inplace = True)
+    
+    
+
+class FaceGridEachFold():
+    """
+    각 Fold 마다 클래스별 확률 분포를 그린다.
+    """
+    def __init__(self, fontsize=16, row='fold', hue='Target', size=3, aspect=4):
+        self.fontsize = fontsize
+        self.row = row
+        self.hue = hue
+        self.size = size
+        self.aspect = aspect
+        
+    def __call__(self, predictions):
+        # Kdeplot
+        plt.rcParams['font.size'] = self.fontsize
+        g = sns.FacetGrid(predictions, row = self.row, hue = self.hue, size = self.size, aspect = self.aspect)
+        g.map(sns.kdeplot, 'confidence');
+        g.add_legend();
+
+        plt.suptitle('Distribution of Confidence by Fold and Target', y = 1.05)
+        
+        
+
+from sklearn.metrics import confusion_matrix
+import itertools
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Oranges):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    Source: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    plt.figure(figsize = (10, 10))
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title, size = 24)
+    plt.colorbar(aspect=4)
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45, size = 14)
+    plt.yticks(tick_marks, classes, size = 14)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    
+    # Labeling the plot
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt), fontsize = 20,
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+        
+    plt.grid(None)
+    plt.tight_layout()
+    plt.ylabel('True label', size = 18)
+    plt.xlabel('Predicted label', size = 18)
